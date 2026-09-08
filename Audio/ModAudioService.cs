@@ -5,16 +5,22 @@ using UnityEngine;
 
 namespace LokrModAPI.Audio
 {
-	/// <summary>Sound playback service supporting one-shot clips and cached, randomized mod sounds.</summary>
+	/// <summary>Sound playback service supporting one-shot clips, looping music, and cached randomized mod sounds.</summary>
 	/// <remarks>
-	/// Direct port of ModManager.PlaySound / ModdedSound (docs/modapi-plan.md §4.3). Driven every
-	/// frame by LokrModAPIPlugin.Update() calling the internal Update() below -- same play/stop
-	/// bookkeeping as the original, just no longer living on a MonoBehaviour itself.
+	/// Direct port of ModManager.PlaySound / ModdedSound (docs/modapi-plan.md §4.3), plus a looping
+	/// music player for Lab-authored WAV cues. Modded audio bypasses MasterAudio entirely — clips
+	/// are Unity AudioSources. Driven every frame by LokrModAPIPlugin.Update() calling the internal
+	/// Update() below -- same play/stop bookkeeping as the original, just no longer living on a
+	/// MonoBehaviour itself.
 	/// </remarks>
 	public sealed class ModAudioService
 	{
+		private const string MusicVolumePref = "IronhideUserMusicVolumeEditorPref";
+		private const string SfxVolumePref = "IronhideUserSoundFXVolumeEditorPref";
+
 		private readonly Dictionary<ModdedSound, bool> playingSounds = new Dictionary<ModdedSound, bool>();
 		private readonly Dictionary<string, ModdedSound> sounds = new Dictionary<string, ModdedSound>();
+		private AudioSource musicSource;
 
 		/// <summary>Fire-and-forget playback of an already-resolved AudioClip via a transient, self-cleaning AudioSource.</summary>
 		/// <remarks>
@@ -31,9 +37,56 @@ namespace LokrModAPI.Audio
 			GameObject gameObject = new GameObject("ModSoundOneShot");
 			AudioSource audioSource = gameObject.AddComponent<AudioSource>();
 			audioSource.clip = clip;
-			audioSource.volume = UserSettings.Get("IronhideUserSoundFXVolumeEditorPref", 1f);
+			audioSource.volume = UserSettings.Get(SfxVolumePref, 1f);
 			audioSource.Play();
 			Object.Destroy(gameObject, clip.length + 0.1f);
+		}
+
+		/// <summary>Starts looping <paramref name="clip"/> as the current music track, replacing any previous Lab music.</summary>
+		/// <remarks>
+		/// Uses the game's music-volume preference, not SFX. Does not talk to MasterAudio — callers
+		/// that need vanilla's Music playlist silenced should do that themselves.
+		/// </remarks>
+		public void PlayMusic(AudioClip clip)
+		{
+			if (clip == null)
+			{
+				return;
+			}
+
+			AudioSource source = EnsureMusicSource();
+			source.Stop();
+			source.clip = clip;
+			source.loop = true;
+			source.volume = UserSettings.Get(MusicVolumePref, 1f);
+			source.Play();
+		}
+
+		/// <summary>Stops Lab music started by <see cref="PlayMusic"/>. A no-op when nothing is playing.</summary>
+		public void StopMusic()
+		{
+			if (musicSource == null)
+			{
+				return;
+			}
+
+			musicSource.Stop();
+			musicSource.clip = null;
+		}
+
+		private AudioSource EnsureMusicSource()
+		{
+			if (musicSource != null)
+			{
+				return musicSource;
+			}
+
+			GameObject gameObject = new GameObject("ModMusic");
+			Object.DontDestroyOnLoad(gameObject);
+			musicSource = gameObject.AddComponent<AudioSource>();
+			musicSource.playOnAwake = false;
+			musicSource.loop = true;
+			return musicSource;
 		}
 
 		/// <summary>Plays (or restarts) a cached, randomized mod sound for a unit/event, resolving variant files from the mod folder on first use.</summary>
@@ -99,7 +152,7 @@ namespace LokrModAPI.Audio
 						sources.Add(audioSource);
 						byte[] wavFile = File.ReadAllBytes(Path.Combine(modPath, "Sounds", unitId, text));
 						audioSource.clip = OpenWavParser.ByteArrayToAudioClip(wavFile, "", false);
-						audioSource.volume = UserSettings.Get("IronhideUserSoundFXVolumeEditorPref", 1f);
+						audioSource.volume = UserSettings.Get(SfxVolumePref, 1f);
 					}
 				}
 			}
@@ -107,7 +160,7 @@ namespace LokrModAPI.Audio
 			/// <summary>Plays a random one of the cached variant sources.</summary>
 			public void Play()
 			{
-				sources[UnityEngine.Random.Range(0, sources.Count)].volume = UserSettings.Get("IronhideUserSoundFXVolumeEditorPref", 1f);
+				sources[UnityEngine.Random.Range(0, sources.Count)].volume = UserSettings.Get(SfxVolumePref, 1f);
 				sources[UnityEngine.Random.Range(0, sources.Count)].Play();
 				isPlaying = true;
 			}

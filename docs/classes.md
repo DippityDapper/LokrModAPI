@@ -62,6 +62,8 @@ calling its internal `Update()`.
 
 ```csharp
 void PlayClip(AudioClip clip)
+void PlayMusic(AudioClip clip)
+void StopMusic()
 void PlaySound(string eventName, string unitId, string modFolder)
 internal void Update()
 ```
@@ -69,7 +71,11 @@ internal void Update()
 - `PlayClip`: fire-and-forget one-shot playback of an already-resolved
   clip — spawns a transient `GameObject`/`AudioSource`, plays once,
   self-destroys after `clip.length + 0.1f` seconds. No caching, no
-  mod-folder awareness.
+  mod-folder awareness. SFX volume.
+- `PlayMusic` / `StopMusic`: looping exclusive Lab music on a persistent
+  `AudioSource`, using the game's music-volume preference
+  (`IronhideUserMusicVolumeEditorPref`). Bypasses MasterAudio — same
+  pattern as `PlayClip` for SFX.
 - `PlaySound`: registers/looks up a cached `ModdedSound` (keyed by
   `unitId + eventName`) and marks it for playback on the next tick.
 - Private nested `ModdedSound`: on construction, scans
@@ -138,7 +144,7 @@ static void Dump(Scene scene, string outputDirectory)
 
 Walks every root `GameObject`, recursively formats name/`activeSelf`/
 layer/tag plus components and children (2-space indent per depth), writes
-`<outputDirectory>/<sceneName or "unnamed">.txt`. Special-cases detail
+`<outputDirectory>/<sceneName or "unnamed">-<yyyyMMdd-HHmmss>.txt`. Special-cases detail
 output for `RectTransform`, `Text`, `Camera`, and `Canvas`; other
 component types just get their type name. Handles `<missing script>`
 components (a `null` entry from `GetComponents<Component>()`) explicitly
@@ -265,8 +271,8 @@ internal static void Tick(string source)
   `KeyboardShortcutListenerPatches` each frame; fires at most one handler
   per frame (first match wins).
 
-Used by `LokrModMenu` (mod menu toggle) and `LokrModAPIPlugin` (Ctrl+Shift+F9
-debug dump chord).
+Used by `LokrModMenu` (mod menu toggle), `LokrPatch` (debug panel /
+SRDebugger), and `LokrModAPIPlugin` (Ctrl+Shift+F9 dump, always registered).
 
 ## `KeyBinding` (`Input/KeyBinding.cs`)
 

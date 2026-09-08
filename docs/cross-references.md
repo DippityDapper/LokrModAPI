@@ -15,7 +15,8 @@
   constraint in the runtime rig loader.
 - **`UserSettings.Get("IronhideUserSoundFXVolumeEditorPref", 1f)`** is the
   base game's own SFX-volume preference key (`Ironhide.Legends.Services.
-  Persistence`), reused rather than duplicated.
+  Persistence`), reused rather than duplicated. Music uses
+  **`IronhideUserMusicVolumeEditorPref`** the same way (`ModAudioService.PlayMusic`).
 - **`SceneManager.sceneLoaded` + `StartCoroutine` incompatibility**: a
   `NullReferenceException` from Unity's native implementation when
   starting a coroutine from inside a `sceneLoaded` handler — root cause

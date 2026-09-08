@@ -25,7 +25,7 @@ namespace LokrModAPI
 		/// <summary>This plugin's display name.</summary>
 		public const string Name = "LoKR Mod API";
 		/// <summary>This plugin's version string.</summary>
-		public const string Version = "1.0.0";
+		public const string Version = "1.0.2";
 
 		/// <summary>This plugin's shared BepInEx log source, set once in Awake().</summary>
 		internal static ManualLogSource Log;
@@ -60,21 +60,16 @@ namespace LokrModAPI
 			harmony = new Harmony(Guid);
 			harmony.PatchAll();
 
-			if (ModAPI.Config.DumpSceneHierarchies.Value)
-			{
-				GameInputPoll.Register(
-					"DumpSceneHierarchy",
-					new KeyBinding(KeyCode.F9, control: true, shift: true),
-					DumpActiveSceneNow);
-			}
+			GameInputPoll.Register(
+				"DumpSceneHierarchy",
+				new KeyBinding(KeyCode.F9, control: true, shift: true),
+				DumpActiveSceneNow);
 
 			Log.LogInfo(string.Format(
 				"{0} v{1} loaded — {2} method(s) patched.",
 				Name, Version, harmony.GetPatchedMethods().Count()));
-			if (ModAPI.Config.DumpSceneHierarchies.Value)
-			{
-				Log.LogInfo("Scene hierarchy dump hotkey: Ctrl+Shift+F9 (bare F9 often blocked on Linux/Proton).");
-			}
+			Log.LogInfo("Scene hierarchy dump: Ctrl+Shift+F9 writes to " + ModAPI.Config.SceneDumpPath.Value
+				+ " (auto-dump after each scene load is still DumpSceneHierarchies).");
 		}
 
 		private static void DumpActiveSceneNow()

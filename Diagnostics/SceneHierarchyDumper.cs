@@ -9,16 +9,13 @@ namespace LokrModAPI.Diagnostics
 {
 	/// <summary>Dev-only diagnostic that writes a scene's full GameObject/Component tree to a text file.</summary>
 	/// <remarks>
-	/// Reference tool, not a runtime dependency for any patch -- gated behind
-	/// ModAPI.Config.DumpSceneHierarchies since it's dev-only (mirrors a workflow from earlier
-	/// reskin-modding: dump the scene a couple seconds after load, then read the dump on disk to
-	/// find real field/hierarchy names instead of guessing from decompiled source alone). Callers
-	/// are responsible for the delay themselves (LokrModAPIPlugin.Update() schedules this a couple
-	/// seconds after sceneLoaded fires).
+	/// Reference tool, not a runtime dependency for any patch. Ctrl+Shift+F9 always writes a
+	/// timestamped file so two atlas states can be compared. Auto-dump after each scene load is
+	/// still gated behind ModAPI.Config.DumpSceneHierarchies.
 	/// </remarks>
 	public static class SceneHierarchyDumper
 	{
-		/// <summary>Writes the given scene's full GameObject/Component hierarchy to a text file (named after the scene) in outputDirectory.</summary>
+		/// <summary>Writes the scene tree to <c>&lt;scene&gt;-&lt;yyyyMMdd-HHmmss&gt;.txt</c> under outputDirectory.</summary>
 		public static void Dump(Scene scene, string outputDirectory)
 		{
 			StringBuilder text = new StringBuilder();
@@ -31,11 +28,19 @@ namespace LokrModAPI.Diagnostics
 				AppendGameObject(text, root, 0);
 			}
 
-			Directory.CreateDirectory(outputDirectory);
-			string safeName = string.IsNullOrEmpty(scene.name) ? "unnamed" : scene.name;
-			string path = Path.Combine(outputDirectory, safeName + ".txt");
-			File.WriteAllText(path, text.ToString());
-			LokrModAPIPlugin.Log.LogInfo("SceneHierarchyDumper: wrote " + path);
+			try
+			{
+				Directory.CreateDirectory(outputDirectory);
+				string safeName = string.IsNullOrEmpty(scene.name) ? "unnamed" : scene.name;
+				string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+				string path = Path.Combine(outputDirectory, safeName + "-" + stamp + ".txt");
+				File.WriteAllText(path, text.ToString());
+				LokrModAPIPlugin.Log.LogInfo("SceneHierarchyDumper: wrote " + path);
+			}
+			catch (Exception ex)
+			{
+				LokrModAPIPlugin.Log.LogError("SceneHierarchyDumper: failed writing to " + outputDirectory + " — " + ex.Message);
+			}
 		}
 
 		/// <summary>Recursively appends a GameObject, its components, and its children to the dump text.</summary>

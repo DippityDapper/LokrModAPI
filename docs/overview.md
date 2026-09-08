@@ -28,7 +28,7 @@ config: skipping the splash video.
 ## Plugin metadata
 
 `LokrModAPIPlugin.cs`: `Guid = "com.lokrmodding.lokrmodapi"`,
-`Name = "LoKR Mod API"`, `Version = "1.0.0"`. No `[BepInDependency]` — this
+`Name = "LoKR Mod API"`, `Version = "1.0.2"`. No `[BepInDependency]` — this
 plugin has no dependencies of its own; every other plugin depends on it
 instead (via `[BepInDependency(LokrModAPIPlugin.Guid)]`, referencing these
 `public const string` fields directly).
